@@ -565,7 +565,7 @@ var Select = React.createClass({
 	},
 
 	selectFocusedOption: function() {
-		if (this.props.allowCreate && !this.state.focusedOption) {
+		if (this.props.allowCreate && !this.state.focusedOption && !this.doesSelectedValueExist(this.state.inputValue)) {
 			return this.selectValue(this.state.inputValue);
 		}
 		return this.selectValue(this.state.focusedOption);
@@ -649,12 +649,16 @@ var Select = React.createClass({
 		}
 		// Add the current value to the filtered options in last resort
 		if (this.props.allowCreate && this.state.inputValue.trim()) {
-			var inputValue = this.state.inputValue;
-			this.state.filteredOptions.unshift({
+			var inputValue	= this.state.inputValue;
+			var createOption = {
 				value: inputValue,
 				label: inputValue,
 				create: true
-			});
+			};
+
+			if (!this.doesFilteredOptionExist(createOption) && !this.doesSelectedValueExist(createOption.value)) {
+				this.state.filteredOptions.unshift(createOption);
+			}
 		}
 
 		var ops = Object.keys(this.state.filteredOptions).map(function(key) {
@@ -675,12 +679,17 @@ var Select = React.createClass({
 			var mouseLeave = this.unfocusOption.bind(this, op);
 			var mouseDown = this.selectValue.bind(this, op);
 			var renderedLabel = renderLabel(op);
+			var key = (op.create) ? "option-add-" + op.value : "option-" + op.value;
 
-			return op.disabled ? (
-				<div ref={ref} key={'option-' + op.value} className={optionClass}>{renderedLabel}</div>
-			) : (
-				<div ref={ref} key={'option-' + op.value} className={optionClass} onMouseEnter={mouseEnter} onMouseLeave={mouseLeave} onMouseDown={mouseDown} onClick={mouseDown}>{ op.create ? 'Add ' + op.label + ' ?' : renderedLabel}</div>
-			);
+			if (op.disabled) {
+				return (
+					<div ref={ref} key={key} className={optionClass}>{renderedLabel}</div>
+				);
+			} else {
+				return (
+					<div ref={ref} key={key} className={optionClass} onMouseEnter={mouseEnter} onMouseLeave={mouseLeave} onMouseDown={mouseDown} onClick={mouseDown}>{ op.create ? 'Add ' + op.label + ' ?' : renderedLabel}</div>
+				);
+			}
 		}, this);
 
 		return ops.length ? ops : (
@@ -688,6 +697,38 @@ var Select = React.createClass({
 				{this.props.asyncOptions && !this.state.inputValue ? this.props.searchPromptText : this.props.noResultsText}
 			</div>
 		);
+	},
+
+	doesFilteredOptionExist: function(option) {
+		var match = false;
+		for (var key in this.state.filteredOptions) {
+			if (this.state.filteredOptions.hasOwnProperty(key)) {
+				var filtered = this.state.filteredOptions[key];
+
+				if (filtered.value == option.value) {
+					match = true;
+					break;
+				}
+			}
+		}
+
+		return match;
+	},
+
+	doesSelectedValueExist: function(value) {
+		var match = false;
+		for (var key in this.state.values) {
+			if (this.state.values.hasOwnProperty(key)) {
+				var optionValue = this.state.values[key];
+
+				if (optionValue.value == value) {
+					match = true;
+					break;
+				}
+			}
+		}
+
+		return match;
 	},
 
 	handleOptionLabelClick: function (value, event) {
